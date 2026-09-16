@@ -1,0 +1,27 @@
+{
+  "name": "mnemo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Local-first, passive tracking of everything you watch.",
+  "author": "pumcak",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pumcak/mnemo.git"
+  },
+  "packageManager": "pnpm@11.5.3",
+  "engines": {
+    "node": ">=22.18.0",
+    "pnpm": ">=11"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "turbo": "^2.10.13",
+    "typescript": "^7.0.2"
+  }
+}
