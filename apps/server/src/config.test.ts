@@ -42,4 +42,19 @@ describe('parseConfig', () => {
   it('refuses a log level pino would not understand', () => {
     expect(() => parseConfig({ MNEMO_LOG_LEVEL: 'loud' })).toThrow();
   });
+
+  it('places the database in the per user data directory of the platform', () => {
+    const windows = parseConfig({ LOCALAPPDATA: 'C:\\Users\\someone\\AppData\\Local' }, 'win32');
+    const linux = parseConfig({ XDG_DATA_HOME: '/data' }, 'linux');
+
+    expect(windows.databasePath).toContain('AppData');
+    expect(linux.databasePath).toContain('data');
+    expect(windows.databasePath.endsWith('mnemo.db')).toBe(true);
+  });
+
+  it('lets the environment point the database somewhere else', () => {
+    const config = parseConfig({ MNEMO_DB_PATH: '/tmp/somewhere/else.db' }, 'linux');
+
+    expect(config.databasePath).toBe('/tmp/somewhere/else.db');
+  });
 });
