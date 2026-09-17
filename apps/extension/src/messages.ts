@@ -1,4 +1,4 @@
-import { playbackStateSchema } from '@mnemo/contracts';
+import { mediaHintSchema, playbackStateSchema } from '@mnemo/contracts';
 import { z } from 'zod';
 
 /**
@@ -15,6 +15,8 @@ export const playbackMessageSchema = z.object({
   positionSeconds: z.number().nonnegative().finite(),
   durationSeconds: z.number().positive().finite().optional(),
   rawTitle: z.string().trim().min(1).max(500),
+  hint: mediaHintSchema.optional(),
+  titleSource: z.enum(['media-session', 'json-ld', 'og-title', 'document-title']),
   url: z.url().max(2000),
   reason: z.enum(['state-change', 'progress', 'seek']),
 });
