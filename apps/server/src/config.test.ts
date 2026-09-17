@@ -33,4 +33,13 @@ describe('parseConfig', () => {
   it('refuses a port that is not a number', () => {
     expect(() => parseConfig({ MNEMO_PORT: 'eight' })).toThrow();
   });
+
+  it('logs at info level unless told otherwise', () => {
+    expect(parseConfig({}).logLevel).toBe('info');
+    expect(parseConfig({ MNEMO_LOG_LEVEL: 'debug' }).logLevel).toBe('debug');
+  });
+
+  it('refuses a log level pino would not understand', () => {
+    expect(() => parseConfig({ MNEMO_LOG_LEVEL: 'loud' })).toThrow();
+  });
 });
