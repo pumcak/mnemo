@@ -15,6 +15,7 @@ export const configSchema = z.object({
       error: `host must be one of ${loopbackHosts.join(', ')}`,
     }),
   port: z.coerce.number().int().min(1024).max(65535).default(4870),
+  logLevel: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -23,4 +24,5 @@ export const parseConfig = (env: Record<string, string | undefined>): Config =>
   configSchema.parse({
     host: env.MNEMO_HOST,
     port: env.MNEMO_PORT,
+    logLevel: env.MNEMO_LOG_LEVEL,
   });

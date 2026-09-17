@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { createApp } from './app';
 import type { HealthPayload } from './app';
+import type { Logger } from './logger';
+
+const silentLogger: Logger = {
+  debug: () => undefined,
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+};
 
 describe('health endpoint', () => {
   it('reports that the service is up and how long it has been up', async () => {
-    const response = await createApp().request('/health');
+    const response = await createApp(silentLogger).request('/health');
 
     expect(response.status).toBe(200);
 
@@ -15,7 +23,7 @@ describe('health endpoint', () => {
   });
 
   it('answers nothing else', async () => {
-    const response = await createApp().request('/');
+    const response = await createApp(silentLogger).request('/');
 
     expect(response.status).toBe(404);
   });
