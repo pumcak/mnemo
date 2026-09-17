@@ -3,6 +3,7 @@ import { defineContentScript } from 'wxt/utils/define-content-script';
 import { browserStore } from '../src/browser-store';
 import type { PlaybackMessage } from '../src/messages';
 import { isBlocked, loadSettings } from '../src/settings';
+import { extractMedia } from '../src/title/extract';
 import { observeVideos } from '../src/video/observe';
 import { watchVideo } from '../src/video/watch';
 
@@ -25,14 +26,24 @@ export default defineContentScript({
     observeVideos(document, (video) =>
       watchVideo(video, {
         onObservation: (observation) => {
+          // Read the title at every observation rather than once: the next
+          // episode starts in the same page, with the same video element.
+          const media = extractMedia(document, navigator.mediaSession?.metadata);
+
+          if (media === undefined) {
+            return;
+          }
+
           const message: PlaybackMessage = {
             type: 'mnemo.playback',
             observedAt: new Date().toISOString(),
             state: observation.state,
             positionSeconds: observation.positionSeconds,
-            rawTitle: document.title,
+            rawTitle: media.rawTitle,
+            titleSource: media.source,
             url: location.href,
             reason: observation.reason,
+            ...(media.hint === undefined ? {} : { hint: media.hint }),
             ...(observation.durationSeconds === undefined
               ? {}
               : { durationSeconds: observation.durationSeconds }),

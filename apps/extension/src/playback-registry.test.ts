@@ -9,6 +9,7 @@ const message = (overrides: Partial<PlaybackMessage> = {}): PlaybackMessage => (
   positionSeconds: 30,
   durationSeconds: 2520,
   rawTitle: 'Arcane S01E01',
+  titleSource: 'document-title',
   url: 'https://www.netflix.com/watch/81435684',
   reason: 'progress',
   ...overrides,
