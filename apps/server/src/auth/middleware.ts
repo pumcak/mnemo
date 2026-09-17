@@ -1,5 +1,6 @@
 import type { MiddlewareHandler } from 'hono';
 import { tokenMatches } from './token';
+import { fail } from '../http/errors';
 
 const bearerPrefix = 'Bearer ';
 
@@ -16,7 +17,7 @@ export const requireToken = (token: string): MiddlewareHandler => {
     const provided = header.startsWith(bearerPrefix) ? header.slice(bearerPrefix.length) : '';
 
     if (!tokenMatches(token, provided)) {
-      return c.json({ error: 'unauthorized' }, 401);
+      return fail(c, 401, 'unauthorized', 'a valid token is required');
     }
 
     await next();
@@ -42,7 +43,7 @@ export const requireLocalHost = (): MiddlewareHandler => {
     const hostname = header.replace(/:\d+$/, '');
 
     if (!localHostnames.has(hostname)) {
-      return c.json({ error: 'forbidden host' }, 403);
+      return fail(c, 403, 'forbidden_host', 'this service only answers on loopback');
     }
 
     await next();

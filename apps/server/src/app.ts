@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { requireLocalHost, requireToken } from './auth/middleware';
 import type { DatabaseHandle } from './db/client';
+import { failureHandler, notFoundHandler } from './http/errors';
 import { createIngestRoutes } from './ingest/routes';
 import type { Logger } from './logger';
 import { createPairingRoutes } from './pairing/routes';
@@ -28,6 +29,8 @@ export interface AppDeps {
  */
 export const createApp = ({ handle, logger, token, allowedOrigins = [] }: AppDeps): Hono =>
   new Hono()
+    .onError(failureHandler(logger))
+    .notFound(notFoundHandler)
     .use('*', requestLogger(logger))
     .use('*', requireLocalHost())
     .use(
