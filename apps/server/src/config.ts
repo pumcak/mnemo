@@ -21,6 +21,20 @@ export const configSchema = z.object({
   databasePath: z.string().min(1),
   heartbeatRetentionDays: z.coerce.number().int().min(1).max(3650).default(30),
   tokenPath: z.string().min(1),
+  /**
+   * Origins allowed to call the service from a browser. Empty by default: until
+   * an extension is built and its origin is known, no cross origin caller has
+   * any business here.
+   */
+  allowedOrigins: z
+    .string()
+    .default('')
+    .transform((value) =>
+      value
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter((origin) => origin.length > 0),
+    ),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -38,5 +52,6 @@ export const parseConfig = (
     databasePath,
     heartbeatRetentionDays: env.MNEMO_HEARTBEAT_RETENTION_DAYS,
     tokenPath: env.MNEMO_TOKEN_PATH ?? join(dirname(databasePath), 'mnemo.token'),
+    allowedOrigins: env.MNEMO_ALLOWED_ORIGINS,
   });
 };

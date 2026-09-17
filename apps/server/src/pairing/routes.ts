@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { pairRequestSchema } from '@mnemo/contracts';
 import type { PairResponse } from '@mnemo/contracts';
 import { Hono } from 'hono';
-import { tokenMatches } from '../auth/token';
 import type { DatabaseHandle } from '../db/client';
 import { devices } from '../db/schema';
 import type { Logger } from '../logger';
@@ -10,10 +9,10 @@ import type { Logger } from '../logger';
 export interface PairingDeps {
   handle: DatabaseHandle;
   logger: Logger;
-  token: string;
 }
 
-export const createPairingRoutes = ({ handle, logger, token }: PairingDeps): Hono =>
+/** The token is checked by the guard in front of this route, not here. */
+export const createPairingRoutes = ({ handle, logger }: PairingDeps): Hono =>
   new Hono().post('/', async (c) => {
     let body: unknown;
 
@@ -27,12 +26,6 @@ export const createPairingRoutes = ({ handle, logger, token }: PairingDeps): Hon
 
     if (!parsed.success) {
       return c.json({ error: 'pairing request does not match the contract' }, 400);
-    }
-
-    if (!tokenMatches(token, parsed.data.token)) {
-      logger.warn({ name: parsed.data.name }, 'pairing refused');
-
-      return c.json({ error: 'invalid token' }, 401);
     }
 
     const now = new Date();
