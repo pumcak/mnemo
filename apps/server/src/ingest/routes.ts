@@ -2,6 +2,7 @@ import { heartbeatSchema } from '@mnemo/contracts';
 import { Hono } from 'hono';
 import { recordHeartbeat, UnknownDeviceError } from './record-heartbeat';
 import type { DatabaseHandle } from '../db/client';
+import { fail, zodDetails } from '../http/errors';
 import type { Logger } from '../logger';
 
 export interface IngestDeps {
@@ -16,7 +17,7 @@ export const createIngestRoutes = ({ handle, logger }: IngestDeps): Hono =>
     try {
       body = await c.req.json();
     } catch {
-      return c.json({ error: 'body must be json' }, 400);
+      return fail(c, 400, 'invalid_body', 'body must be json');
     }
 
     const parsed = heartbeatSchema.safeParse(body);
@@ -27,25 +28,20 @@ export const createIngestRoutes = ({ handle, logger }: IngestDeps): Hono =>
       // talking to the endpoint. Worth a log line either way.
       logger.warn({ issues: parsed.error.issues.length }, 'heartbeat rejected');
 
-      return c.json(
-        {
-          error: 'heartbeat does not match the contract',
-          issues: parsed.error.issues.map((issue) => ({
-            path: issue.path.join('.'),
-            message: issue.message,
-          })),
-        },
+      return fail(
+        c,
         400,
+        'contract_violation',
+        'heartbeat does not match the contract',
+        zodDetails(parsed.error),
       );
     }
 
     try {
-      const recorded = recordHeartbeat(handle, parsed.data);
-
-      return c.json(recorded, 202);
+      return c.json(recordHeartbeat(handle, parsed.data), 202);
     } catch (error) {
       if (error instanceof UnknownDeviceError) {
-        return c.json({ error: 'unknown device' }, 404);
+        return fail(c, 404, 'unknown_device', 'this device needs to pair first');
       }
 
       throw error;

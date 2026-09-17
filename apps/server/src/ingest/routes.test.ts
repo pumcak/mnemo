@@ -1,3 +1,4 @@
+import { errorResponseSchema } from '@mnemo/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { DatabaseHandle } from '../db/client';
 import { heartbeats } from '../db/schema';
@@ -52,9 +53,10 @@ describe('POST /ingest/heartbeat', () => {
 
     expect(response.status).toBe(400);
 
-    const payload = (await response.json()) as { issues: { path: string }[] };
+    const payload = errorResponseSchema.parse(await response.json());
 
-    expect(payload.issues[0]?.path).toBe('positionSeconds');
+    expect(payload.error.code).toBe('contract_violation');
+    expect(payload.error.details?.[0]?.path).toBe('positionSeconds');
     expect(handle.db.select().from(heartbeats).all()).toHaveLength(0);
   });
 

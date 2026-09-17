@@ -4,6 +4,7 @@ import type { PairResponse } from '@mnemo/contracts';
 import { Hono } from 'hono';
 import type { DatabaseHandle } from '../db/client';
 import { devices } from '../db/schema';
+import { fail, zodDetails } from '../http/errors';
 import type { Logger } from '../logger';
 
 export interface PairingDeps {
@@ -19,13 +20,19 @@ export const createPairingRoutes = ({ handle, logger }: PairingDeps): Hono =>
     try {
       body = await c.req.json();
     } catch {
-      return c.json({ error: 'body must be json' }, 400);
+      return fail(c, 400, 'invalid_body', 'body must be json');
     }
 
     const parsed = pairRequestSchema.safeParse(body);
 
     if (!parsed.success) {
-      return c.json({ error: 'pairing request does not match the contract' }, 400);
+      return fail(
+        c,
+        400,
+        'contract_violation',
+        'pairing request does not match the contract',
+        zodDetails(parsed.error),
+      );
     }
 
     const now = new Date();
