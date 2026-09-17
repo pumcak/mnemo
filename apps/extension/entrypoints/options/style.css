@@ -1,0 +1,103 @@
+:root {
+  color-scheme: light dark;
+  --gap: 0.75rem;
+}
+
+body {
+  margin: 0;
+  padding: 2rem 1rem;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  line-height: 1.5;
+}
+
+main {
+  max-width: 36rem;
+  margin: 0 auto;
+  display: grid;
+  gap: 2rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+h2 {
+  margin: 0 0 var(--gap);
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
+section {
+  display: grid;
+  gap: var(--gap);
+}
+
+label {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+label.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 400;
+}
+
+input[type='text'],
+input[type='url'],
+input[type='password'],
+textarea {
+  width: 100%;
+  padding: 0.5rem;
+  font: inherit;
+  border: 1px solid currentColor;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+  box-sizing: border-box;
+}
+
+button {
+  justify-self: start;
+  padding: 0.5rem 1rem;
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid currentColor;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  opacity: 0.7;
+}
+
+.hint.problem {
+  opacity: 1;
+  font-weight: 600;
+}
+
+ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+ul:empty::after {
+  content: 'Nothing right now.';
+  opacity: 0.7;
+  font-size: 0.875rem;
+}
+
+code {
+  font-size: 0.8125rem;
+}
