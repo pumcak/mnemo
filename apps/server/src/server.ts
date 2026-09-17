@@ -18,7 +18,9 @@ pruneHeartbeats(handle, config.heartbeatRetentionDays, logger);
 
 logger.info({ path: config.databasePath }, 'database ready');
 
-serve({ fetch: createApp(logger).fetch, hostname: config.host, port: config.port }, (info) => {
+const app = createApp({ handle, logger });
+
+serve({ fetch: app.fetch, hostname: config.host, port: config.port }, (info) => {
   logger.info({ host: config.host, port: info.port }, 'listening');
 });
 

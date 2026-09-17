@@ -1,18 +1,22 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from './app';
 import type { HealthPayload } from './app';
-import type { Logger } from './logger';
-
-const silentLogger: Logger = {
-  debug: () => undefined,
-  info: () => undefined,
-  warn: () => undefined,
-  error: () => undefined,
-};
+import type { DatabaseHandle } from './db/client';
+import { openMigratedDatabase, silentLogger } from './testing/database';
 
 describe('health endpoint', () => {
+  let handle: DatabaseHandle;
+
+  beforeEach(() => {
+    handle = openMigratedDatabase();
+  });
+
+  afterEach(() => {
+    handle.close();
+  });
+
   it('reports that the service is up and how long it has been up', async () => {
-    const response = await createApp(silentLogger).request('/health');
+    const response = await createApp({ handle, logger: silentLogger }).request('/health');
 
     expect(response.status).toBe(200);
 
@@ -23,7 +27,7 @@ describe('health endpoint', () => {
   });
 
   it('answers nothing else', async () => {
-    const response = await createApp(silentLogger).request('/');
+    const response = await createApp({ handle, logger: silentLogger }).request('/');
 
     expect(response.status).toBe(404);
   });
