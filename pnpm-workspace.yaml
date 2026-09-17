@@ -2,5 +2,7 @@ packages:
   - 'apps/*'
   - 'packages/*'
 allowBuilds:
+  # Fetches or compiles the native sqlite binding.
+  better-sqlite3: true
   # tsx needs it to link its platform binary.
   esbuild: true
