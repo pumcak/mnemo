@@ -1,3 +1,4 @@
+import { crunchyrollAdapter } from './crunchyroll';
 import { netflixAdapter } from './netflix';
 import type { SiteAdapter } from './types';
 
@@ -5,4 +6,4 @@ import type { SiteAdapter } from './types';
  * Site adapters, in priority order. Anything not listed here gets the generic
  * reading, which is the normal case rather than a failure.
  */
-export const adapters: readonly SiteAdapter[] = [netflixAdapter];
+export const adapters: readonly SiteAdapter[] = [netflixAdapter, crunchyrollAdapter];
