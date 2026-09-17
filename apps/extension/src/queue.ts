@@ -10,13 +10,19 @@ export interface QueueOptions {
    */
   maxSize?: number;
   onUnpaired?: () => void;
+  /** Called whenever what is waiting changes, so it can be written somewhere it survives. */
+  onChange?: (waiting: readonly Heartbeat[]) => void;
 }
 
 export interface HeartbeatQueue {
   enqueue: (heartbeat: Heartbeat) => void;
+  /** Puts back what was waiting before the worker was suspended. */
+  restore: (waiting: readonly Heartbeat[]) => void;
   flush: () => Promise<void>;
   pending: () => readonly Heartbeat[];
   dropped: () => number;
+  /** How many times in a row the service could not take the oldest observation. */
+  failures: () => number;
 }
 
 const defaultMaxSize = 200;
@@ -32,21 +38,36 @@ export const createHeartbeatQueue = ({
   send,
   maxSize = defaultMaxSize,
   onUnpaired,
+  onChange,
 }: QueueOptions): HeartbeatQueue => {
-  const waiting: Heartbeat[] = [];
+  let waiting: Heartbeat[] = [];
   let droppedCount = 0;
+  let failureCount = 0;
   let flushing = false;
+
+  const changed = (): void => {
+    onChange?.([...waiting]);
+  };
+
+  const trim = (): void => {
+    while (waiting.length > maxSize) {
+      // The oldest goes: a session that old has already been closed by the
+      // service, while what is happening now can still be recorded usefully.
+      waiting.shift();
+      droppedCount += 1;
+    }
+  };
 
   return {
     enqueue: (heartbeat) => {
       waiting.push(heartbeat);
-
-      while (waiting.length > maxSize) {
-        // The oldest goes: a session that old has already been closed by the
-        // service, while what is happening now can still be recorded usefully.
-        waiting.shift();
-        droppedCount += 1;
-      }
+      trim();
+      changed();
+    },
+    restore: (stored) => {
+      waiting = [...stored, ...waiting];
+      trim();
+      changed();
     },
     flush: async () => {
       if (flushing) {
@@ -66,16 +87,21 @@ export const createHeartbeatQueue = ({
           const outcome = await send(next);
 
           if (outcome === 'retry') {
+            failureCount += 1;
+
             return;
           }
 
           if (outcome === 'unpaired') {
+            failureCount += 1;
             onUnpaired?.();
 
             return;
           }
 
+          failureCount = 0;
           waiting.shift();
+          changed();
         }
       } finally {
         flushing = false;
@@ -83,5 +109,6 @@ export const createHeartbeatQueue = ({
     },
     pending: () => [...waiting],
     dropped: () => droppedCount,
+    failures: () => failureCount,
   };
 };

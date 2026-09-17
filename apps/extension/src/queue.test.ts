@@ -126,3 +126,57 @@ describe('createHeartbeatQueue', () => {
     expect(queue.pending()).toEqual([]);
   });
 });
+
+describe('a queue that has to survive a suspended worker', () => {
+  it('reports what is waiting whenever it changes', async () => {
+    const seen: number[][] = [];
+    const queue = createHeartbeatQueue({
+      send: () => Promise.resolve<DeliveryOutcome>('sent'),
+      onChange: (waiting) => seen.push(waiting.map((item) => item.positionSeconds)),
+    });
+
+    queue.enqueue(heartbeat(1));
+    queue.enqueue(heartbeat(2));
+    await queue.flush();
+
+    expect(seen[0]).toEqual([1]);
+    expect(seen[1]).toEqual([1, 2]);
+    expect(seen.at(-1)).toEqual([]);
+  });
+
+  it('puts back what was waiting before, ahead of anything new', () => {
+    const queue = createHeartbeatQueue({ send: () => Promise.resolve<DeliveryOutcome>('retry') });
+
+    queue.enqueue(heartbeat(9));
+    queue.restore([heartbeat(1), heartbeat(2)]);
+
+    expect(queue.pending().map((item) => item.positionSeconds)).toEqual([1, 2, 9]);
+  });
+
+  it('counts failures in a row, which is what the backoff grows on', async () => {
+    let outcome: DeliveryOutcome = 'retry';
+    const queue = createHeartbeatQueue({ send: () => Promise.resolve(outcome) });
+
+    queue.enqueue(heartbeat(1));
+    await queue.flush();
+    await queue.flush();
+
+    expect(queue.failures()).toBe(2);
+
+    outcome = 'sent';
+    await queue.flush();
+
+    expect(queue.failures()).toBe(0);
+  });
+
+  it('honours the bound when restoring, so a long outage cannot fill memory', () => {
+    const queue = createHeartbeatQueue({
+      send: () => Promise.resolve<DeliveryOutcome>('retry'),
+      maxSize: 2,
+    });
+
+    queue.restore([heartbeat(1), heartbeat(2), heartbeat(3)]);
+
+    expect(queue.pending().map((item) => item.positionSeconds)).toEqual([2, 3]);
+  });
+});
