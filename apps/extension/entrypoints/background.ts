@@ -35,9 +35,17 @@ export default defineBackground(() => {
 
     const tabId = sender.tab?.id;
 
-    if (tabId !== undefined) {
-      registry.record(tabId, parsed.data);
+    if (tabId === undefined) {
+      return undefined;
     }
+
+    if (parsed.data.type === 'mnemo.pageContext') {
+      registry.recordContext(tabId, parsed.data);
+
+      return undefined;
+    }
+
+    registry.recordPlayback(tabId, sender.frameId ?? 0, parsed.data);
 
     return undefined;
   });
