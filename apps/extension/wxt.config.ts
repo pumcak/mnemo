@@ -17,7 +17,11 @@ export default defineConfig({
      *
      * The host permission is the loopback service and nothing but it.
      */
-    permissions: ['storage'],
+    /**
+     * Alarms are the retry timer. A background worker is suspended while an
+     * episode plays, so a timer it holds in memory never fires.
+     */
+    permissions: ['storage', 'alarms'],
     host_permissions: ['http://127.0.0.1/*', 'http://localhost/*'],
     /**
      * Firefox needs an explicit identifier, otherwise it assigns a new one on

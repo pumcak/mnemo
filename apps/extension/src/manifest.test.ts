@@ -32,8 +32,8 @@ const manifestFor = (browser: string): BuiltManifest => {
 describe.each(['chrome', 'firefox'])('the manifest we ask %s for', (browser) => {
   const manifest = manifestFor(browser);
 
-  it('asks for storage and nothing more', () => {
-    expect(manifest.permissions).toEqual(['storage']);
+  it('asks for storage and alarms, and nothing more', () => {
+    expect(manifest.permissions).toEqual(['storage', 'alarms']);
   });
 
   it('asks for no host beyond the loopback interface', () => {

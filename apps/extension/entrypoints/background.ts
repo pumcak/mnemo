@@ -1,20 +1,51 @@
 import { browser } from 'wxt/browser';
 import { defineBackground } from 'wxt/utils/define-background';
+import { retryDelayMs } from '../src/backoff';
 import { browserStore } from '../src/browser-store';
 import { heartbeatFrom } from '../src/heartbeat';
 import { extensionMessageSchema } from '../src/messages';
 import { createPlaybackRegistry } from '../src/playback-registry';
 import { createHeartbeatQueue } from '../src/queue';
 import type { HeartbeatQueue } from '../src/queue';
+import { readStoredQueue, writeStoredQueue } from '../src/queue-storage';
 import { createServiceClient } from '../src/service-client';
 import { isPaired, loadSettings, saveSettings } from '../src/settings';
 import type { Settings } from '../src/settings';
+
+const retryAlarm = 'mnemo.retry';
 
 export default defineBackground(() => {
   const registry = createPlaybackRegistry();
 
   let settings: Settings | undefined;
   let queue: HeartbeatQueue | undefined;
+
+  /**
+   * Schedules the next attempt through an alarm rather than a timer, because a
+   * suspended worker never runs a timer it was holding.
+   */
+  const scheduleRetry = (pending: HeartbeatQueue): void => {
+    if (pending.pending().length === 0) {
+      void browser.alarms.clear(retryAlarm);
+
+      return;
+    }
+
+    void browser.alarms.create(retryAlarm, {
+      when: Date.now() + retryDelayMs(pending.failures()),
+    });
+  };
+
+  const drain = async (): Promise<void> => {
+    const pending = queue;
+
+    if (pending === undefined) {
+      return;
+    }
+
+    await pending.flush();
+    scheduleRetry(pending);
+  };
 
   /**
    * Rebuilt whenever the settings change, because pairing is what gives the
@@ -36,8 +67,11 @@ export default defineBackground(() => {
       token: loaded.token,
     });
 
-    queue = createHeartbeatQueue({
+    const built = createHeartbeatQueue({
       send: client.sendHeartbeat,
+      onChange: (waiting) => {
+        void writeStoredQueue(browserStore, waiting);
+      },
       onUnpaired: () => {
         // The service no longer knows this device. Forgetting the identifier is
         // what makes the options page ask for pairing again.
@@ -48,6 +82,10 @@ export default defineBackground(() => {
         })();
       },
     });
+
+    queue = built;
+    built.restore(await readStoredQueue(browserStore));
+    await drain();
   };
 
   browser.runtime.onInstalled.addListener(() => {
@@ -57,8 +95,20 @@ export default defineBackground(() => {
     })();
   });
 
-  browser.storage.onChanged.addListener(() => {
+  browser.storage.onChanged.addListener((changes) => {
+    // The queue writes to storage itself, and reacting to that would rebuild
+    // the queue on every observation.
+    if (Object.keys(changes).every((key) => key === 'mnemo.queue')) {
+      return;
+    }
+
     void reload();
+  });
+
+  browser.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === retryAlarm) {
+      void drain();
+    }
   });
 
   void reload();
@@ -104,7 +154,7 @@ export default defineBackground(() => {
       heartbeatFrom(registry.describe(tabId, frameId, parsed.data), current.deviceId),
     );
 
-    return pending.flush();
+    return drain();
   });
 
   browser.tabs.onRemoved.addListener((tabId) => {
