@@ -1,3 +1,6 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+allowBuilds:
+  # tsx needs it to link its platform binary.
+  esbuild: true
