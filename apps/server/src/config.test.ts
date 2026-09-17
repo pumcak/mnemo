@@ -52,6 +52,15 @@ describe('parseConfig', () => {
     expect(windows.databasePath.endsWith('mnemo.db')).toBe(true);
   });
 
+  it('keeps raw heartbeats for a month unless told otherwise', () => {
+    expect(parseConfig({}).heartbeatRetentionDays).toBe(30);
+    expect(parseConfig({ MNEMO_HEARTBEAT_RETENTION_DAYS: '7' }).heartbeatRetentionDays).toBe(7);
+  });
+
+  it('refuses a retention window of zero days', () => {
+    expect(() => parseConfig({ MNEMO_HEARTBEAT_RETENTION_DAYS: '0' })).toThrow();
+  });
+
   it('lets the environment point the database somewhere else', () => {
     const config = parseConfig({ MNEMO_DB_PATH: '/tmp/somewhere/else.db' }, 'linux');
 

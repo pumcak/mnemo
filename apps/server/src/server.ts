@@ -5,6 +5,7 @@ import { createApp } from './app';
 import { parseConfig } from './config';
 import { openDatabase } from './db/client';
 import { runMigrations } from './db/migrate';
+import { pruneHeartbeats } from './db/retention';
 import { createLogger } from './logger';
 
 const config = parseConfig(process.env);
@@ -12,6 +13,8 @@ const logger = createLogger(config);
 
 const handle = openDatabase(config.databasePath);
 runMigrations(handle, join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations'), logger);
+
+pruneHeartbeats(handle, config.heartbeatRetentionDays, logger);
 
 logger.info({ path: config.databasePath }, 'database ready');
 
