@@ -18,7 +18,7 @@ const validBody = {
 };
 
 const post = async (handle: DatabaseHandle, body: unknown, raw?: string): Promise<Response> =>
-  createApp({ handle, logger: silentLogger }).request('/ingest/heartbeat', {
+  createApp({ handle, logger: silentLogger, token: 'test-token' }).request('/ingest/heartbeat', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: raw ?? JSON.stringify(body),

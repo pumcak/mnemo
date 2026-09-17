@@ -2,6 +2,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serve } from '@hono/node-server';
 import { createApp } from './app';
+import { loadOrCreateToken } from './auth/token';
 import { parseConfig } from './config';
 import { openDatabase } from './db/client';
 import { runMigrations } from './db/migrate';
@@ -18,7 +19,11 @@ pruneHeartbeats(handle, config.heartbeatRetentionDays, logger);
 
 logger.info({ path: config.databasePath }, 'database ready');
 
-const app = createApp({ handle, logger });
+const token = loadOrCreateToken(config.tokenPath);
+
+logger.info({ path: config.tokenPath }, 'pairing token ready');
+
+const app = createApp({ handle, logger, token });
 
 serve({ fetch: app.fetch, hostname: config.host, port: config.port }, (info) => {
   logger.info({ host: config.host, port: info.port }, 'listening');

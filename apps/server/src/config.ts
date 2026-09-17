@@ -1,3 +1,4 @@
+import { dirname, join } from 'node:path';
 import { z } from 'zod';
 import { resolveDefaultDatabasePath } from './db/paths';
 
@@ -19,6 +20,7 @@ export const configSchema = z.object({
   logLevel: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   databasePath: z.string().min(1),
   heartbeatRetentionDays: z.coerce.number().int().min(1).max(3650).default(30),
+  tokenPath: z.string().min(1),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -26,11 +28,15 @@ export type Config = z.infer<typeof configSchema>;
 export const parseConfig = (
   env: Record<string, string | undefined>,
   platform: NodeJS.Platform = process.platform,
-): Config =>
-  configSchema.parse({
+): Config => {
+  const databasePath = env.MNEMO_DB_PATH ?? resolveDefaultDatabasePath({ platform, env });
+
+  return configSchema.parse({
     host: env.MNEMO_HOST,
     port: env.MNEMO_PORT,
     logLevel: env.MNEMO_LOG_LEVEL,
-    databasePath: env.MNEMO_DB_PATH ?? resolveDefaultDatabasePath({ platform, env }),
+    databasePath,
     heartbeatRetentionDays: env.MNEMO_HEARTBEAT_RETENTION_DAYS,
+    tokenPath: env.MNEMO_TOKEN_PATH ?? join(dirname(databasePath), 'mnemo.token'),
   });
+};

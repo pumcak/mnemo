@@ -16,7 +16,9 @@ describe('health endpoint', () => {
   });
 
   it('reports that the service is up and how long it has been up', async () => {
-    const response = await createApp({ handle, logger: silentLogger }).request('/health');
+    const response = await createApp({ handle, logger: silentLogger, token: 'test-token' }).request(
+      '/health',
+    );
 
     expect(response.status).toBe(200);
 
@@ -27,7 +29,9 @@ describe('health endpoint', () => {
   });
 
   it('answers nothing else', async () => {
-    const response = await createApp({ handle, logger: silentLogger }).request('/');
+    const response = await createApp({ handle, logger: silentLogger, token: 'test-token' }).request(
+      '/',
+    );
 
     expect(response.status).toBe(404);
   });
