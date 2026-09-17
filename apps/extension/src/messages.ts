@@ -17,7 +17,7 @@ export const playbackMessageSchema = z.object({
   rawTitle: z.string().trim().min(1).max(500),
   app: z.string().trim().min(1).max(200),
   hint: mediaHintSchema.optional(),
-  titleSource: z.enum(['media-session', 'json-ld', 'og-title', 'document-title']),
+  titleSource: z.enum(['site-adapter', 'media-session', 'json-ld', 'og-title', 'document-title']),
   url: z.url().max(2000),
   reason: z.enum(['state-change', 'progress', 'seek']),
 });

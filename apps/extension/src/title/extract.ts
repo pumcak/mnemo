@@ -1,6 +1,7 @@
 import type { MediaHint } from '@mnemo/contracts';
 
-export type TitleSource = 'media-session' | 'json-ld' | 'og-title' | 'document-title';
+export type TitleSource =
+  'site-adapter' | 'media-session' | 'json-ld' | 'og-title' | 'document-title';
 
 export interface ExtractedMedia {
   rawTitle: string;
