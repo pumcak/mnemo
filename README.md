@@ -1,5 +1,7 @@
 # Mnemo
 
+[![CI](https://github.com/pumcak/mnemo/actions/workflows/ci.yml/badge.svg)](https://github.com/pumcak/mnemo/actions/workflows/ci.yml)
+
 Mnemo keeps track of what you watch, automatically. It runs on your own machine,
 listens to the video players you already use, and turns them into a single
 viewing history you can actually browse.
