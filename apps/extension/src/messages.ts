@@ -15,6 +15,7 @@ export const playbackMessageSchema = z.object({
   positionSeconds: z.number().nonnegative().finite(),
   durationSeconds: z.number().positive().finite().optional(),
   rawTitle: z.string().trim().min(1).max(500),
+  app: z.string().trim().min(1).max(200),
   hint: mediaHintSchema.optional(),
   titleSource: z.enum(['media-session', 'json-ld', 'og-title', 'document-title']),
   url: z.url().max(2000),

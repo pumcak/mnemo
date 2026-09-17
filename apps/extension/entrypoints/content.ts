@@ -2,8 +2,9 @@ import { browser } from 'wxt/browser';
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { browserStore } from '../src/browser-store';
 import type { PlaybackMessage } from '../src/messages';
+import { adapters } from '../src/adapters';
+import { createAdapterRegistry } from '../src/adapters/registry';
 import { isBlocked, loadSettings } from '../src/settings';
-import { extractMedia } from '../src/title/extract';
 import { observeVideos } from '../src/video/observe';
 import { watchVideo } from '../src/video/watch';
 
@@ -23,12 +24,18 @@ export default defineContentScript({
       return;
     }
 
+    const registry = createAdapterRegistry(adapters);
+
     observeVideos(document, (video) =>
       watchVideo(video, {
         onObservation: (observation) => {
           // Read the title at every observation rather than once: the next
           // episode starts in the same page, with the same video element.
-          const media = extractMedia(document, navigator.mediaSession?.metadata);
+          const media = registry.resolve({
+            doc: document,
+            url: new URL(location.href),
+            session: navigator.mediaSession?.metadata,
+          });
 
           if (media === undefined) {
             return;
@@ -40,6 +47,7 @@ export default defineContentScript({
             state: observation.state,
             positionSeconds: observation.positionSeconds,
             rawTitle: media.rawTitle,
+            app: media.app,
             titleSource: media.source,
             url: location.href,
             reason: observation.reason,
