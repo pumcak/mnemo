@@ -16,6 +16,8 @@ export interface NowPlaying extends PlaybackMessage {
 export interface PlaybackRegistry {
   recordContext: (tabId: number, context: PageContextMessage) => void;
   recordPlayback: (tabId: number, frameId: number, message: PlaybackMessage) => void;
+  /** The message as it should be reported, with what the tab knows folded in. */
+  describe: (tabId: number, frameId: number, message: PlaybackMessage) => PlaybackMessage;
   forget: (tabId: number) => void;
   nowPlaying: () => NowPlaying[];
 }
@@ -83,6 +85,7 @@ export const createPlaybackRegistry = (): PlaybackRegistry => {
 
       state.playbackByFrame.set(frameId, message);
     },
+    describe: (tabId, frameId, message) => describedBy(message, frameId, tabs.get(tabId)?.context),
     forget: (tabId) => {
       tabs.delete(tabId);
     },

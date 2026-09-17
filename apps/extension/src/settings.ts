@@ -14,6 +14,12 @@ export const settingsSchema = z.object({
   serviceUrl: z.url().default('http://127.0.0.1:4870'),
   paused: z.boolean().default(false),
   blockedDomains: z.array(z.string().trim().min(1)).default([]),
+  /**
+   * Filled in by pairing. Until both are there the extension observes nothing
+   * worth sending, because the service would refuse it anyway.
+   */
+  token: z.string().min(1).max(200).optional(),
+  deviceId: z.uuid().optional(),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -48,6 +54,9 @@ export const loadSettings = async (store: KeyValueStore): Promise<Settings> => {
   >;
   const base = defaultSettings();
 
+  const token = fieldOr(settingsSchema.shape.token, record.token, undefined);
+  const deviceId = fieldOr(settingsSchema.shape.deviceId, record.deviceId, undefined);
+
   return {
     serviceUrl: fieldOr(settingsSchema.shape.serviceUrl, record.serviceUrl, base.serviceUrl),
     paused: fieldOr(settingsSchema.shape.paused, record.paused, base.paused),
@@ -56,12 +65,20 @@ export const loadSettings = async (store: KeyValueStore): Promise<Settings> => {
       record.blockedDomains,
       base.blockedDomains,
     ),
+    ...(token === undefined ? {} : { token }),
+    ...(deviceId === undefined ? {} : { deviceId }),
   };
 };
 
 export const saveSettings = async (store: KeyValueStore, settings: Settings): Promise<void> => {
   await store.set(settingsKey, settingsSchema.parse(settings));
 };
+
+/** True once pairing has given the extension everything it needs to report. */
+export const isPaired = (
+  settings: Settings,
+): settings is Settings & { token: string; deviceId: string } =>
+  settings.token !== undefined && settings.deviceId !== undefined;
 
 /** True when the extension should stay out of the way for this hostname. */
 export const isBlocked = (settings: Settings, hostname: string): boolean =>
