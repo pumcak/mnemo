@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "wxt",
-    "build": "wxt build",
+    "dev:firefox": "wxt -b firefox --mv3",
+    "build": "wxt build && wxt build -b firefox --mv3",
     "prepare:types": "wxt prepare",
     "typecheck": "wxt prepare && tsc --noEmit"
   },
