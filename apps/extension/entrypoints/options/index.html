@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mnemo</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Mnemo</h1>
+
+      <section>
+        <h2>This browser</h2>
+        <p id="pairing-state">Checking.</p>
+        <p class="hint">
+          The token is in <code>mnemo.token</code>, next to the database the service created.
+        </p>
+        <label for="token">Pairing token</label>
+        <input id="token" type="password" autocomplete="off" spellcheck="false" />
+        <label for="name">Name for this browser</label>
+        <input id="name" type="text" autocomplete="off" />
+        <label for="service-url">Service address</label>
+        <input id="service-url" type="url" autocomplete="off" />
+        <button id="pair" type="button">Pair this browser</button>
+      </section>
+
+      <section>
+        <h2>Recording</h2>
+        <label class="row">
+          <input id="paused" type="checkbox" />
+          <span>Pause everything</span>
+        </label>
+        <label for="blocked">Never record these sites</label>
+        <textarea id="blocked" rows="6" spellcheck="false"></textarea>
+        <p class="hint" id="blocked-feedback">One domain per line. Subdomains are covered.</p>
+        <button id="save" type="button">Save</button>
+      </section>
+
+      <section>
+        <h2>Playing now</h2>
+        <ul id="now-playing"></ul>
+      </section>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
