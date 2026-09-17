@@ -4,6 +4,8 @@ build/
 out/
 coverage/
 .turbo/
+.wxt/
+.output/
 pnpm-lock.yaml
 
 # Written by drizzle-kit, in its own formatting.
