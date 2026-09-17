@@ -12,6 +12,8 @@ export default tseslint.config(
       '**/out/**',
       '**/coverage/**',
       '**/.turbo/**',
+      '**/.wxt/**',
+      '**/.output/**',
     ],
   },
   js.configs.recommended,
