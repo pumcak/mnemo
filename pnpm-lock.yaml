@@ -98,6 +98,15 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
 
+  packages/resolver:
+    dependencies:
+      '@mnemo/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+
 packages:
 
   '@1natsu/wait-element@4.2.0':
