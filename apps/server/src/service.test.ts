@@ -174,29 +174,56 @@ describe('restarting the service', () => {
     rmSync(directory, { recursive: true, force: true });
   });
 
-  it('keeps the token and the history across a restart', async () => {
+  const ingestOnce = async (observedAt: string): Promise<string> => {
     const first = await startService(configFor(directory), silentLogger);
 
-    const paired = await fetch(`${first.url}/pair`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${first.token}` },
-      body: JSON.stringify({ name: 'desktop', platform: 'windows' }),
-    });
-    const { deviceId } = (await paired.json()) as { deviceId: string };
+    try {
+      const paired = await fetch(`${first.url}/pair`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${first.token}` },
+        body: JSON.stringify({ name: 'desktop', platform: 'windows' }),
+      });
+      const { deviceId } = (await paired.json()) as { deviceId: string };
 
-    await fetch(`${first.url}/ingest/heartbeat`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${first.token}` },
-      body: heartbeatFor(deviceId, 30, '2026-09-17T22:00:00.000Z'),
-    });
+      const ingested = await fetch(`${first.url}/ingest/heartbeat`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${first.token}` },
+        body: heartbeatFor(deviceId, 30, observedAt),
+      });
 
-    await first.close();
+      expect(ingested.status).toBe(202);
 
+      return first.token;
+    } finally {
+      await first.close();
+    }
+  };
+
+  /**
+   * Observations are dated relative to now. A fixed date in the past ages out of
+   * the retention window and gets pruned at the next start, which is correct
+   * behaviour and made this test fail a month after it was written.
+   */
+  it('keeps the token and the history across a restart', async () => {
+    const token = await ingestOnce(new Date().toISOString());
     const second = await startService(configFor(directory), silentLogger);
 
-    expect(second.token).toBe(first.token);
-    expect(second.handle.db.select().from(heartbeats).all()).toHaveLength(1);
+    try {
+      expect(second.token).toBe(token);
+      expect(second.handle.db.select().from(heartbeats).all()).toHaveLength(1);
+    } finally {
+      await second.close();
+    }
+  });
 
-    await second.close();
+  it('prunes raw observations older than the retention window when it starts', async () => {
+    await ingestOnce(new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString());
+    const second = await startService(configFor(directory), silentLogger);
+
+    try {
+      expect(second.handle.db.select().from(heartbeats).all()).toHaveLength(0);
+    } finally {
+      await second.close();
+    }
   });
 });
