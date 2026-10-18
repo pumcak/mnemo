@@ -5,6 +5,7 @@ export * from './numbering';
 export * from './parse';
 export * from './tags';
 export * from './types';
+export * from './catalogue/anilist';
 export * from './catalogue/cache';
 export * from './catalogue/rate-limit';
 export * from './catalogue/tmdb';
