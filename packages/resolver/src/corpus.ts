@@ -27,6 +27,12 @@ export const corpusEntrySchema = z.object({
   origin: z.enum(corpusOrigins),
   /** Why this entry is in the corpus, when that is not obvious from the string. */
   note: z.string().optional(),
+  /**
+   * True when the string alone cannot reach the expectation, and the hint sent by
+   * the capture source or the catalogue has to supply the rest. "Oppenheimer" on
+   * Netflix is a film, but nothing in those eleven letters says so.
+   */
+  needsHint: z.boolean().optional(),
   expected: z.object({
     kind: titleKindSchema,
     title: z.string(),
@@ -53,11 +59,13 @@ export const corpus: readonly CorpusEntry[] = [
     raw: 'Welcome to the Playground',
     origin: 'netflix',
     note: 'What the Netflix adapter reports: an episode name with no numbering in it.',
+    needsHint: true,
     expected: { kind: 'episode', title: 'Welcome to the Playground' },
   },
   {
     raw: 'Oppenheimer',
     origin: 'netflix',
+    needsHint: true,
     expected: { kind: 'movie', title: 'Oppenheimer' },
   },
   {
@@ -161,7 +169,13 @@ export const corpus: readonly CorpusEntry[] = [
   {
     raw: 'Arcane 2x03 VF - Fini de jouer - streaming',
     origin: 'unofficial',
-    expected: { kind: 'episode', title: 'Arcane', season: 2, episode: 3 },
+    expected: {
+      kind: 'episode',
+      title: 'Fini de jouer',
+      series: 'Arcane',
+      season: 2,
+      episode: 3,
+    },
   },
   {
     raw: 'The Bear - Saison 3 Épisode 1 en streaming VOSTFR',
