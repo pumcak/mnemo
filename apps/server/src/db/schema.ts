@@ -1,5 +1,6 @@
 import { devicePlatforms, playbackStates, sourceKinds } from '@mnemo/contracts';
 import type { MediaHint } from '@mnemo/contracts';
+import { catalogueNames, workKinds } from '@mnemo/resolver';
 import { sql } from 'drizzle-orm';
 import { check, index, integer, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
@@ -100,5 +101,32 @@ export const heartbeats = sqliteTable(
     index('heartbeats_session_observed').on(table.sessionId, table.observedAt),
     index('heartbeats_observed').on(table.observedAt),
     check('heartbeats_state_known', oneOf('state', playbackStates)),
+  ],
+);
+
+/**
+ * What somebody decided a title means, after the resolver got it wrong or was
+ * not sure.
+ *
+ * Keyed on the normalised name the catalogues would be asked about and on the
+ * kind of work, because "Dune" the film and "Dune" the series are two different
+ * corrections. A correction is consulted before any catalogue is asked, so it is
+ * also the cheapest resolution there is.
+ */
+export const aliases = sqliteTable(
+  'aliases',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    normalizedTitle: text('normalized_title').notNull(),
+    kind: text('kind').notNull(),
+    catalogue: text('catalogue').notNull(),
+    externalId: integer('external_id').notNull(),
+    title: text('title').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    unique('aliases_title_kind').on(table.normalizedTitle, table.kind),
+    check('aliases_kind_known', oneOf('kind', workKinds)),
+    check('aliases_catalogue_known', oneOf('catalogue', catalogueNames)),
   ],
 );

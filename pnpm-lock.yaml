@@ -66,6 +66,9 @@ importers:
       '@mnemo/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@mnemo/resolver':
+        specifier: workspace:*
+        version: link:../../packages/resolver
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3

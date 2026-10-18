@@ -15,6 +15,13 @@
       "when": 1789673423294,
       "tag": "0001_playback_sessions_and_heartbeats",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792361326599,
+      "tag": "0002_aliases",
+      "breakpoints": true
     }
   ]
 }

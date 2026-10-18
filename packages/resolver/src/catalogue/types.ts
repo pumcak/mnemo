@@ -1,4 +1,9 @@
-export type CatalogueName = 'tmdb' | 'anilist';
+/** Exported as values so the database can build its check constraints from them. */
+export const catalogueNames = ['tmdb', 'anilist'] as const;
+export const workKinds = ['movie', 'series'] as const;
+
+export type CatalogueName = (typeof catalogueNames)[number];
+export type WorkKind = (typeof workKinds)[number];
 
 /**
  * One work a catalogue offered for a query, in the shape every catalogue is
@@ -8,7 +13,7 @@ export type CatalogueName = 'tmdb' | 'anilist';
 export interface Candidate {
   catalogue: CatalogueName;
   id: number;
-  kind: 'movie' | 'series';
+  kind: WorkKind;
   title: string;
   /** Original, romanised and translated titles, and synonyms. Matching tries them all. */
   alternativeTitles: string[];
