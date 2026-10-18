@@ -1,8 +1,11 @@
 import { devicePlatforms, playbackStates, sourceKinds } from '@mnemo/contracts';
 import type { MediaHint } from '@mnemo/contracts';
 import { catalogueNames, workKinds } from '@mnemo/resolver';
+import type { ParsedTitle } from '@mnemo/resolver';
 import { sql } from 'drizzle-orm';
 import { check, index, integer, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
+import { reviewStatuses } from '../resolution/types';
+import type { ReviewCandidate } from '../resolution/types';
 
 /**
  * Builds a check constraint from the values the contracts package already
@@ -128,5 +131,34 @@ export const aliases = sqliteTable(
     unique('aliases_title_kind').on(table.normalizedTitle, table.kind),
     check('aliases_kind_known', oneOf('kind', workKinds)),
     check('aliases_catalogue_known', oneOf('catalogue', catalogueNames)),
+  ],
+);
+
+/**
+ * Titles the resolver was not sure about, waiting for a person.
+ *
+ * One item per session: a title that keeps coming back while it plays updates
+ * its item instead of filling the queue with copies. The candidates are stored
+ * as they were scored, so the person decides on what the resolver saw rather
+ * than on a fresh search that may answer differently.
+ */
+export const reviewItems = sqliteTable(
+  'review_items',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    sessionId: integer('session_id')
+      .notNull()
+      .references(() => playbackSessions.id, { onDelete: 'cascade' }),
+    rawTitle: text('raw_title').notNull(),
+    parsed: text('parsed', { mode: 'json' }).$type<ParsedTitle>().notNull(),
+    candidates: text('candidates', { mode: 'json' }).$type<ReviewCandidate[]>().notNull(),
+    status: text('status').notNull().default('pending'),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    decidedAt: integer('decided_at', { mode: 'timestamp_ms' }),
+  },
+  (table) => [
+    unique('review_items_session').on(table.sessionId),
+    index('review_items_status').on(table.status, table.createdAt),
+    check('review_items_status_known', oneOf('status', reviewStatuses)),
   ],
 );
