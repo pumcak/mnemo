@@ -157,6 +157,24 @@ export const corpus: readonly CorpusEntry[] = [
     expected: { kind: 'episode', title: 'Kaguya-sama wa Kokurasetai', season: 2, episode: 5 },
   },
   {
+    raw: '[SubsPlease] Dandadan - 01v2 (1080p) [5F3C2A1B].mkv',
+    origin: 'release-name',
+    note: 'A reissued release: the v2 is a version, not part of the episode number.',
+    expected: { kind: 'episode', title: 'Dandadan', episode: 1 },
+  },
+  {
+    raw: '[Erai-raws] Kimetsu no Yaiba - 01 ~ 26 [1080p][Batch].mkv',
+    origin: 'release-name',
+    note: 'A pack of a whole season. Playback starts at the first episode of the range.',
+    expected: { kind: 'episode', title: 'Kimetsu no Yaiba', episode: 1 },
+  },
+  {
+    raw: '[Judas] Shingeki no Kyojin 2nd Season - 05 [1080p][HEVC x265 10bit].mkv',
+    origin: 'release-name',
+    note: 'A sequel season named with an ordinal, which is how anime numbers them.',
+    expected: { kind: 'episode', title: 'Shingeki no Kyojin', season: 2, episode: 5 },
+  },
+  {
     raw: 'Regarder One Piece Épisode 1071 VOSTFR en streaming - SiteExemple',
     origin: 'unofficial',
     expected: { kind: 'episode', title: 'One Piece', episode: 1071 },

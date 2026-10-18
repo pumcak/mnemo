@@ -124,6 +124,8 @@ export const tagGroups = {
     'remastered',
     'integrale',
     'integral',
+    'batch',
+    'complete',
   ],
   /** What a streaming site wraps a title in when it wants to be found. */
   furniture: ['streaming', 'stream', 'gratuit', 'gratuitement', 'complet', 'online', 'vostfree'],

@@ -103,6 +103,11 @@ const seasonOnlyRules: readonly Rule[] = [
     read: (match) => ({ season: positive(match[1]) }),
   },
   {
+    // "2nd Season" is how anime names a sequel season.
+    pattern: /\b(\d{1,2})(?:st|nd|rd|th)\s+season\b/i,
+    read: (match) => ({ season: positive(match[1]) }),
+  },
+  {
     pattern: /\bS(\d{1,2})\b/i,
     read: (match) => ({ season: positive(match[1]) }),
   },
@@ -112,8 +117,12 @@ const seasonOnlyRules: readonly Rule[] = [
  * The anime shape: a bare number at the very end, behind a dash. Restricted to
  * the end because a bare number anywhere else is a year, part of the name, or the
  * "1071" in the title of a reaction video.
+ *
+ * Two anime habits ride on it. A release fixed after the fact carries a version,
+ * "01v2", which says nothing about which episode it is. A pack carries a range,
+ * "01-12", and like a file holding two episodes, the first is where playback is.
  */
-const trailingEpisode = /\s[-–]\s*(\d{1,4})\s*$/;
+const trailingEpisode = /\s[-–]\s*(\d{1,4})(?:v\d)?(?:\s*[-~]\s*\d{1,4}(?:v\d)?)?\s*$/i;
 
 const separators = new Set(['-', '–', '|', ':']);
 

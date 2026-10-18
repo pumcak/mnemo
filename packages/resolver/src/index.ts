@@ -1,3 +1,4 @@
+export * from './anime';
 export * from './clean';
 export * from './corpus';
 export * from './numbering';
