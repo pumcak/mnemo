@@ -2,6 +2,7 @@ import type { AddressInfo } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serve } from '@hono/node-server';
+import type { Catalogues } from '@mnemo/resolver';
 import { createApp } from './app';
 import { loadOrCreateToken } from './auth/token';
 import type { Config } from './config';
@@ -10,6 +11,8 @@ import type { DatabaseHandle } from './db/client';
 import { runMigrations } from './db/migrate';
 import { pruneHeartbeats } from './db/retention';
 import type { Logger } from './logger';
+import { backfillResolutions } from './resolution/backfill';
+import type { BackfillSummary } from './resolution/backfill';
 
 const migrationsFolder = join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
 
@@ -19,7 +22,17 @@ export interface Service {
   port: number;
   token: string;
   handle: DatabaseHandle;
+  /** Runs one resolution pass now. Resolves to nothing when no catalogue is configured. */
+  resolvePending: () => Promise<BackfillSummary | undefined>;
   close: () => Promise<void>;
+}
+
+export interface ServiceOptions {
+  /**
+   * The catalogues to resolve titles against. Left out, nothing is resolved and
+   * nothing touches the network, which is what tests and an offline start want.
+   */
+  catalogues?: Catalogues;
 }
 
 /**
@@ -30,7 +43,11 @@ export interface Service {
  * Returning the bound port is what lets a test start a real service on a port
  * the operating system picks, rather than hoping a hardcoded one is free.
  */
-export const startService = async (config: Config, logger: Logger): Promise<Service> => {
+export const startService = async (
+  config: Config,
+  logger: Logger,
+  { catalogues }: ServiceOptions = {},
+): Promise<Service> => {
   const handle = openDatabase(config.databasePath);
 
   runMigrations(handle, migrationsFolder, logger);
@@ -55,12 +72,48 @@ export const startService = async (config: Config, logger: Logger): Promise<Serv
 
   logger.info({ host: config.host, port }, 'listening');
 
+  let running: Promise<BackfillSummary> | undefined;
+
+  /**
+   * One pass at a time: a slow catalogue can make a pass outlast the interval,
+   * and two passes over the same pending sessions would resolve them twice.
+   */
+  const resolvePending = async (): Promise<BackfillSummary | undefined> => {
+    if (catalogues === undefined) {
+      return undefined;
+    }
+
+    running ??= backfillResolutions(handle, { catalogues, logger }).finally(() => {
+      running = undefined;
+    });
+
+    return running;
+  };
+
+  const runInBackground = (): void => {
+    resolvePending().catch((error: unknown) => {
+      logger.error({ err: String(error) }, 'resolution pass failed');
+    });
+  };
+
+  const timer =
+    catalogues === undefined
+      ? undefined
+      : setInterval(runInBackground, config.resolveIntervalMinutes * 60 * 1000);
+
+  // A timer that is only there for background work must not keep the process alive.
+  timer?.unref();
+  runInBackground();
+
   return {
     url: `http://${config.host}:${port}`,
     port,
     token,
     handle,
+    resolvePending,
     close: async () => {
+      clearInterval(timer);
+      await running?.catch(() => undefined);
       await new Promise<void>((resolve, reject) => {
         server.close((error) => {
           if (error) {

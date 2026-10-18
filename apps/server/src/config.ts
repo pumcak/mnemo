@@ -26,6 +26,12 @@ export const configSchema = z.object({
    * an extension is built and its origin is known, no cross origin caller has
    * any business here.
    */
+  /**
+   * TMDB read access token. Optional: without it, films and western series stay
+   * unresolved, while anime still resolves through AniList, which needs no key.
+   */
+  tmdbToken: z.string().trim().min(1).optional(),
+  resolveIntervalMinutes: z.coerce.number().int().min(1).max(1440).default(10),
   allowedOrigins: z
     .string()
     .default('')
@@ -53,5 +59,7 @@ export const parseConfig = (
     heartbeatRetentionDays: env.MNEMO_HEARTBEAT_RETENTION_DAYS,
     tokenPath: env.MNEMO_TOKEN_PATH ?? join(dirname(databasePath), 'mnemo.token'),
     allowedOrigins: env.MNEMO_ALLOWED_ORIGINS,
+    tmdbToken: env.MNEMO_TMDB_TOKEN === '' ? undefined : env.MNEMO_TMDB_TOKEN,
+    resolveIntervalMinutes: env.MNEMO_RESOLVE_INTERVAL_MINUTES,
   });
 };

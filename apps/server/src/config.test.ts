@@ -61,6 +61,18 @@ describe('parseConfig', () => {
     expect(() => parseConfig({ MNEMO_HEARTBEAT_RETENTION_DAYS: '0' })).toThrow();
   });
 
+  it('runs without a tmdb token, which only costs films and western series', () => {
+    expect(parseConfig({}).tmdbToken).toBeUndefined();
+    expect(parseConfig({ MNEMO_TMDB_TOKEN: '' }).tmdbToken).toBeUndefined();
+    expect(parseConfig({ MNEMO_TMDB_TOKEN: 'a-read-token' }).tmdbToken).toBe('a-read-token');
+  });
+
+  it('resolves pending sessions every ten minutes unless told otherwise', () => {
+    expect(parseConfig({}).resolveIntervalMinutes).toBe(10);
+    expect(parseConfig({ MNEMO_RESOLVE_INTERVAL_MINUTES: '2' }).resolveIntervalMinutes).toBe(2);
+    expect(() => parseConfig({ MNEMO_RESOLVE_INTERVAL_MINUTES: '0' })).toThrow();
+  });
+
   it('lets the environment point the database somewhere else', () => {
     const config = parseConfig({ MNEMO_DB_PATH: '/tmp/somewhere/else.db' }, 'linux');
 

@@ -13,3 +13,13 @@ export interface ReviewCandidate {
 export const reviewStatuses = ['pending', 'resolved', 'dismissed'] as const;
 
 export type ReviewStatus = (typeof reviewStatuses)[number];
+
+/**
+ * pending: never tried, or tried while a catalogue was unavailable.
+ * resolved: matched with confidence, or settled by a person.
+ * review: waiting in the review queue.
+ * unresolvable: recognised as nothing, or dismissed by a person.
+ */
+export const resolutionStates = ['pending', 'resolved', 'review', 'unresolvable'] as const;
+
+export type ResolutionState = (typeof resolutionStates)[number];

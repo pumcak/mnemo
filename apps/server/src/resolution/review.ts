@@ -4,7 +4,7 @@ import { asc, eq } from 'drizzle-orm';
 import { kindOf, recordAlias } from './aliases';
 import type { ReviewCandidate } from './types';
 import type { DatabaseHandle } from '../db/client';
-import { reviewItems } from '../db/schema';
+import { playbackSessions, reviewItems } from '../db/schema';
 
 export type ReviewItem = typeof reviewItems.$inferSelect;
 
@@ -108,6 +108,10 @@ export const decideReview = (
         .set({ status: 'dismissed', decidedAt: now })
         .where(eq(reviewItems.id, itemId))
         .run();
+      tx.update(playbackSessions)
+        .set({ resolutionState: 'unresolvable', resolvedAt: now })
+        .where(eq(playbackSessions.id, item.sessionId))
+        .run();
 
       return;
     }
@@ -128,6 +132,13 @@ export const decideReview = (
     tx.update(reviewItems)
       .set({ status: 'resolved', decidedAt: now })
       .where(eq(reviewItems.id, itemId))
+      .run();
+
+    // Back to pending rather than resolved here: the next pass answers it from
+    // the alias just written, through the same path every other session takes.
+    tx.update(playbackSessions)
+      .set({ resolutionState: 'pending' })
+      .where(eq(playbackSessions.id, item.sessionId))
       .run();
   });
 };

@@ -1,11 +1,11 @@
 import { devicePlatforms, playbackStates, sourceKinds } from '@mnemo/contracts';
 import type { MediaHint } from '@mnemo/contracts';
 import { catalogueNames, workKinds } from '@mnemo/resolver';
-import type { ParsedTitle } from '@mnemo/resolver';
+import type { CatalogueName, ParsedTitle } from '@mnemo/resolver';
 import { sql } from 'drizzle-orm';
 import { check, index, integer, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 import { reviewStatuses } from '../resolution/types';
-import type { ReviewCandidate } from '../resolution/types';
+import type { ResolutionState, ReviewCandidate } from '../resolution/types';
 
 /**
  * Builds a check constraint from the values the contracts package already
@@ -74,6 +74,17 @@ export const playbackSessions = sqliteTable(
     durationSeconds: real('duration_seconds'),
     watchedSeconds: real('watched_seconds').notNull().default(0),
     closedAt: integer('closed_at', { mode: 'timestamp_ms' }),
+    /**
+     * Where resolution stands for this session. Checked in code rather than by a
+     * constraint: adding a table level check to an existing sqlite table means
+     * rebuilding it, and this is the table every heartbeat points at.
+     */
+    resolutionState: text('resolution_state').$type<ResolutionState>().notNull().default('pending'),
+    resolvedCatalogue: text('resolved_catalogue').$type<CatalogueName>(),
+    resolvedExternalId: integer('resolved_external_id'),
+    resolvedTitle: text('resolved_title'),
+    resolutionScore: real('resolution_score'),
+    resolvedAt: integer('resolved_at', { mode: 'timestamp_ms' }),
   },
   (table) => [
     index('playback_sessions_device_last_seen').on(table.deviceId, table.lastSeenAt),

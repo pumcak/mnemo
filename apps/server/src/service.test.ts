@@ -24,6 +24,7 @@ const configFor = (directory: string): Config => ({
   heartbeatRetentionDays: 30,
   tokenPath: join(directory, 'mnemo.token'),
   allowedOrigins: [],
+  resolveIntervalMinutes: 10,
 });
 
 const statusWithHost = (port: number, host: string): Promise<number> =>
@@ -224,6 +225,76 @@ describe('restarting the service', () => {
       expect(second.handle.db.select().from(heartbeats).all()).toHaveLength(0);
     } finally {
       await second.close();
+    }
+  });
+});
+
+describe('resolution inside the running service', () => {
+  let directory: string;
+
+  beforeEach(() => {
+    directory = mkdtempSync(join(tmpdir(), 'mnemo-resolve-'));
+  });
+
+  afterEach(() => {
+    rmSync(directory, { recursive: true, force: true });
+  });
+
+  it('touches no catalogue when none is configured', async () => {
+    const service = await startService(configFor(directory), silentLogger);
+
+    try {
+      expect(await service.resolvePending()).toBeUndefined();
+    } finally {
+      await service.close();
+    }
+  });
+
+  it('resolves what was ingested over http when asked to', async () => {
+    const service = await startService(configFor(directory), silentLogger, {
+      catalogues: {
+        tmdb: {
+          searchMovies: () =>
+            Promise.resolve([
+              {
+                catalogue: 'tmdb',
+                id: 949,
+                kind: 'movie',
+                title: 'Heat',
+                alternativeTitles: [],
+                year: 1995,
+              },
+            ]),
+          searchSeries: () => Promise.resolve([]),
+        },
+      },
+    });
+
+    try {
+      const paired = await fetch(`${service.url}/pair`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${service.token}` },
+        body: JSON.stringify({ name: 'desktop', platform: 'windows' }),
+      });
+      const { deviceId } = (await paired.json()) as { deviceId: string };
+
+      await fetch(`${service.url}/ingest/heartbeat`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${service.token}` },
+        body: JSON.stringify({
+          deviceId,
+          source: { kind: 'browser', app: 'example.test' },
+          rawTitle: 'Heat (1995)',
+          state: 'playing',
+          positionSeconds: 30,
+          observedAt: new Date().toISOString(),
+        }),
+      });
+
+      expect(await service.resolvePending()).toMatchObject({ resolved: 1 });
+      expect(service.handle.db.select().from(playbackSessions).get()?.resolvedExternalId).toBe(949);
+    } finally {
+      await service.close();
     }
   });
 });
