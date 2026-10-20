@@ -14,6 +14,7 @@ import type { Logger } from './logger';
 import { backfillResolutions } from './resolution/backfill';
 import type { BackfillSummary } from './resolution/backfill';
 import { closeIdleSessions } from './sessions/assembly';
+import { promoteViews } from './sessions/views';
 
 const migrationsFolder = join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
 
@@ -53,7 +54,13 @@ export const startService = async (
 
   runMigrations(handle, migrationsFolder, logger);
   pruneHeartbeats(handle, config.heartbeatRetentionDays, logger);
-  closeIdleSessions(handle);
+
+  const sweep = (): void => {
+    closeIdleSessions(handle);
+    promoteViews(handle);
+  };
+
+  sweep();
 
   const token = loadOrCreateToken(config.tokenPath);
   const app = createApp({
@@ -103,7 +110,7 @@ export const startService = async (
       ? undefined
       : setInterval(runInBackground, config.resolveIntervalMinutes * 60 * 1000);
 
-  const sweeper = setInterval(() => closeIdleSessions(handle), 60 * 1000);
+  const sweeper = setInterval(sweep, 60 * 1000);
 
   // Timers that are only there for background work must not keep the process alive.
   timer?.unref();

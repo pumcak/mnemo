@@ -173,3 +173,27 @@ export const reviewItems = sqliteTable(
     check('review_items_status_known', oneOf('status', reviewStatuses)),
   ],
 );
+
+/**
+ * A session that crossed the line from playback into having watched something.
+ *
+ * Kept apart from the session rather than as a flag on it, because the history,
+ * the statistics and any export count views, and a view keeps what it was worth
+ * at the moment it was validated even if the session goes on afterwards.
+ */
+export const views = sqliteTable(
+  'views',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    sessionId: integer('session_id')
+      .notNull()
+      .references(() => playbackSessions.id, { onDelete: 'cascade' }),
+    watchedSeconds: real('watched_seconds').notNull(),
+    progress: real('progress'),
+    validatedAt: integer('validated_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    unique('views_session').on(table.sessionId),
+    index('views_validated').on(table.validatedAt),
+  ],
+);
