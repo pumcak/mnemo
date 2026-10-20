@@ -2,6 +2,7 @@ import type { Heartbeat } from '@mnemo/contracts';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import type { DatabaseHandle } from '../db/client';
 import { devices, heartbeats, playbackSessions, sources } from '../db/schema';
+import { continuesSession, defaultSessionGapMs } from '../sessions/assembly';
 
 /**
  * Raised when a heartbeat names a device nobody registered. Devices carry a
@@ -13,6 +14,11 @@ export class UnknownDeviceError extends Error {
     super(`unknown device ${deviceId}`);
     this.name = 'UnknownDeviceError';
   }
+}
+
+export interface RecordOptions {
+  /** How long a session may stay silent and still be continued. */
+  gapMs?: number;
 }
 
 export interface RecordedHeartbeat {
@@ -27,10 +33,15 @@ export interface RecordedHeartbeat {
  * happens later and must not be on the path of an ingest that runs every few
  * seconds. Everything happens in one transaction, so a heartbeat never lands
  * without the session it belongs to.
+ *
+ * An open session silent for longer than the gap is closed where it stopped and
+ * a new one begins, and an `ended` observation closes its session right away,
+ * so the next play of the same title starts a sitting of its own.
  */
 export const recordHeartbeat = (
   handle: DatabaseHandle,
   heartbeat: Heartbeat,
+  { gapMs = defaultSessionGapMs }: RecordOptions = {},
 ): RecordedHeartbeat => {
   const observedAt = new Date(heartbeat.observedAt);
 
@@ -58,8 +69,8 @@ export const recordHeartbeat = (
       throw new Error('source row disappeared inside the ingest transaction');
     }
 
-    const open = tx
-      .select({ id: playbackSessions.id })
+    const latest = tx
+      .select({ id: playbackSessions.id, lastSeenAt: playbackSessions.lastSeenAt })
       .from(playbackSessions)
       .where(
         and(
@@ -71,6 +82,18 @@ export const recordHeartbeat = (
       )
       .orderBy(desc(playbackSessions.lastSeenAt))
       .get();
+
+    const open =
+      latest !== undefined && continuesSession(latest.lastSeenAt, observedAt, gapMs)
+        ? latest
+        : undefined;
+
+    if (latest !== undefined && open === undefined) {
+      tx.update(playbackSessions)
+        .set({ closedAt: latest.lastSeenAt })
+        .where(eq(playbackSessions.id, latest.id))
+        .run();
+    }
 
     const sessionId =
       open?.id ??
@@ -90,7 +113,9 @@ export const recordHeartbeat = (
         .returning({ id: playbackSessions.id })
         .get().id;
 
-    if (open !== undefined) {
+    // A late observation is still stored, but it must not move the session back
+    // to a position and a time it has already left.
+    if (open !== undefined && observedAt >= open.lastSeenAt) {
       tx.update(playbackSessions)
         .set({
           lastSeenAt: observedAt,
@@ -99,6 +124,13 @@ export const recordHeartbeat = (
         })
         .where(eq(playbackSessions.id, sessionId))
         .run();
+    }
+
+    if (heartbeat.state === 'ended') {
+      const closedAt =
+        open !== undefined && open.lastSeenAt > observedAt ? open.lastSeenAt : observedAt;
+
+      tx.update(playbackSessions).set({ closedAt }).where(eq(playbackSessions.id, sessionId)).run();
     }
 
     const stored = tx
