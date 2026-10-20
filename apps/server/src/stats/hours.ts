@@ -1,6 +1,7 @@
-import { and, asc, eq, gte, lt, sql } from 'drizzle-orm';
+import type { SourceKind } from '@mnemo/contracts';
+import { and, asc, desc, eq, gte, lt, sql } from 'drizzle-orm';
 import type { DatabaseHandle } from '../db/client';
-import { playbackSessions, views } from '../db/schema';
+import { playbackSessions, sources, views } from '../db/schema';
 
 export const periods = ['day', 'week', 'month'] as const;
 
@@ -52,5 +53,27 @@ export const hoursByPeriod = (
     .where(and(gte(playbackSessions.startedAt, from), lt(playbackSessions.startedAt, to)))
     .groupBy(bucket)
     .orderBy(asc(bucket))
+    .all();
+};
+
+export interface SourceHours {
+  kind: SourceKind;
+  /** The site or application, such as netflix.com or vlc. */
+  app: string;
+  hours: number;
+}
+
+/** Hours watched per capture source over a range, the most watched first. */
+export const hoursBySource = (handle: DatabaseHandle, { from, to }: StatsRange): SourceHours[] => {
+  const hours = sql<number>`sum(${playbackSessions.watchedSeconds}) / 3600.0`;
+
+  return handle.db
+    .select({ kind: sources.kind, app: sources.app, hours })
+    .from(views)
+    .innerJoin(playbackSessions, eq(playbackSessions.id, views.sessionId))
+    .innerJoin(sources, eq(sources.id, playbackSessions.sourceId))
+    .where(and(gte(playbackSessions.startedAt, from), lt(playbackSessions.startedAt, to)))
+    .groupBy(sources.id)
+    .orderBy(desc(hours), asc(sources.app))
     .all();
 };

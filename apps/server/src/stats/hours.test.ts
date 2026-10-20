@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { hoursByPeriod } from './hours';
+import { hoursByPeriod, hoursBySource } from './hours';
 import type { DatabaseHandle } from '../db/client';
 import { playbackSessions, sources, views } from '../db/schema';
 import { openMigratedDatabase, registerDevice } from '../testing/database';
@@ -10,7 +10,7 @@ const range = {
   to: new Date('2026-11-01T00:00:00.000Z'),
 };
 
-describe('hoursByPeriod', () => {
+describe('watched hours', () => {
   let handle: DatabaseHandle;
   let sourceId: number;
 
@@ -28,12 +28,12 @@ describe('hoursByPeriod', () => {
     handle.close();
   });
 
-  const watched = (startedAt: string, seconds: number, asView = true): void => {
+  const watched = (startedAt: string, seconds: number, asView = true, source = sourceId): void => {
     const sessionId = handle.db
       .insert(playbackSessions)
       .values({
         deviceId,
-        sourceId,
+        sourceId: source,
         rawTitle: 'Heat (1995)',
         startedAt: new Date(startedAt),
         lastSeenAt: new Date(startedAt),
@@ -96,5 +96,23 @@ describe('hoursByPeriod', () => {
     watched('2026-09-30T20:00:00.000Z', 3600);
 
     expect(hoursByPeriod(handle, 'day', range)).toEqual([]);
+  });
+
+  it('adds up the hours of each source, the most watched first', () => {
+    const vlc = handle.db
+      .insert(sources)
+      .values({ kind: 'smtc', app: 'vlc', createdAt: range.from })
+      .returning({ id: sources.id })
+      .get().id;
+
+    watched('2026-10-19T20:00:00.000Z', 3600);
+    watched('2026-10-20T20:00:00.000Z', 7200, true, vlc);
+    watched('2026-10-21T20:00:00.000Z', 3600, true, vlc);
+    watched('2026-10-22T20:00:00.000Z', 3600, false, vlc);
+
+    expect(hoursBySource(handle, range)).toEqual([
+      { kind: 'smtc', app: 'vlc', hours: 3 },
+      { kind: 'browser', app: 'netflix.com', hours: 1 },
+    ]);
   });
 });
