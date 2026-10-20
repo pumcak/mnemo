@@ -1,5 +1,5 @@
 import type { Heartbeat } from '@mnemo/contracts';
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, lte, sql } from 'drizzle-orm';
 import type { DatabaseHandle } from '../db/client';
 import { devices, heartbeats, playbackSessions, sources } from '../db/schema';
 import { continuesSession, defaultSessionGapMs } from '../sessions/assembly';
@@ -93,6 +93,23 @@ export const recordHeartbeat = (
       tx.update(playbackSessions)
         .set({ closedAt: latest.lastSeenAt })
         .where(eq(playbackSessions.id, latest.id))
+        .run();
+    }
+
+    // A new title on a source that was playing something else is autoplay moving
+    // to the next episode: the previous one ends where it was last seen, instead
+    // of staying open until the idle sweep notices.
+    if (open === undefined) {
+      tx.update(playbackSessions)
+        .set({ closedAt: sql`${playbackSessions.lastSeenAt}` })
+        .where(
+          and(
+            eq(playbackSessions.deviceId, device.id),
+            eq(playbackSessions.sourceId, source.id),
+            isNull(playbackSessions.closedAt),
+            lte(playbackSessions.lastSeenAt, observedAt),
+          ),
+        )
         .run();
     }
 

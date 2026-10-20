@@ -163,6 +163,40 @@ describe('recordHeartbeat', () => {
     expect(handle.db.select().from(playbackSessions).get()?.watchedSeconds).toBe(5);
   });
 
+  it('closes the previous episode when the source moves on to the next', () => {
+    const first = recordHeartbeat(handle, heartbeat({ observedAt: '2026-09-17T20:40:00.000Z' }));
+
+    recordHeartbeat(
+      handle,
+      heartbeat({
+        rawTitle: 'Arcane: Season 1: Some Mysteries Are Better Left Unsolved',
+        observedAt: '2026-09-17T20:41:00.000Z',
+      }),
+    );
+
+    const [previous, next] = handle.db.select().from(playbackSessions).all();
+
+    expect(previous?.id).toBe(first.sessionId);
+    expect(previous?.closedAt?.toISOString()).toBe('2026-09-17T20:40:00.000Z');
+    expect(next?.closedAt).toBeNull();
+  });
+
+  it('leaves another source playing alongside alone', () => {
+    recordHeartbeat(handle, heartbeat());
+    recordHeartbeat(
+      handle,
+      heartbeat({ source: { kind: 'smtc', app: 'vlc' }, rawTitle: 'Heat (1995)' }),
+    );
+
+    expect(
+      handle.db
+        .select()
+        .from(playbackSessions)
+        .all()
+        .map((session) => session.closedAt),
+    ).toEqual([null, null]);
+  });
+
   it('keeps the media hint the source sent', () => {
     recordHeartbeat(handle, heartbeat({ hint: { seriesTitle: 'Arcane', season: 1, episode: 1 } }));
 
