@@ -18,8 +18,10 @@ export const viewSeconds = 20 * 60;
  * was still watched, and because live streams and some players never report a
  * duration to take a share of.
  *
- * Open sessions are included, so a film still playing shows up in the history
- * once it has been watched enough rather than only when the tab closes.
+ * Duplicates of a session reported by a better capture path are skipped, or one
+ * evening would count twice. Open sessions are included, so a film still playing
+ * shows up in the history once it has been watched enough rather than only when
+ * the tab closes.
  */
 export const promoteViews = (handle: DatabaseHandle, now: Date = new Date()): number => {
   const qualifying = handle.db
@@ -34,6 +36,7 @@ export const promoteViews = (handle: DatabaseHandle, now: Date = new Date()): nu
     .where(
       and(
         isNull(views.id),
+        isNull(playbackSessions.duplicateOf),
         or(
           gte(playbackSessions.watchedSeconds, viewSeconds),
           and(

@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url';
+import type { SourceKind } from '@mnemo/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openDatabase } from './client';
 import type { DatabaseHandle } from './client';
@@ -88,11 +89,11 @@ describe('devices and sources tables', () => {
   });
 
   it('refuses a capture kind the contracts do not declare', () => {
+    // Only reachable by lying to the compiler, which is what a stale source would do.
+    const kind = 'chromecast' as SourceKind;
+
     expect(() =>
-      handle.db
-        .insert(sources)
-        .values({ kind: 'chromecast', app: 'chromecast', createdAt: now })
-        .run(),
+      handle.db.insert(sources).values({ kind, app: 'chromecast', createdAt: now }).run(),
     ).toThrow();
   });
 });

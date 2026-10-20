@@ -1,9 +1,10 @@
 import { devicePlatforms, playbackStates, sourceKinds } from '@mnemo/contracts';
-import type { MediaHint, PlaybackState } from '@mnemo/contracts';
+import type { MediaHint, PlaybackState, SourceKind } from '@mnemo/contracts';
 import { catalogueNames, workKinds } from '@mnemo/resolver';
 import type { CatalogueName, ParsedTitle } from '@mnemo/resolver';
 import { sql } from 'drizzle-orm';
 import { check, index, integer, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
+import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 import { reviewStatuses } from '../resolution/types';
 import type { ResolutionState, ReviewCandidate } from '../resolution/types';
 
@@ -36,7 +37,7 @@ export const sources = sqliteTable(
   'sources',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    kind: text('kind').notNull(),
+    kind: text('kind').$type<SourceKind>().notNull(),
     app: text('app').notNull(),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
   },
@@ -85,6 +86,14 @@ export const playbackSessions = sqliteTable(
     resolvedTitle: text('resolved_title'),
     resolutionScore: real('resolution_score'),
     resolvedAt: integer('resolved_at', { mode: 'timestamp_ms' }),
+    /**
+     * The session this one repeats, when two capture paths reported the same
+     * playback. The duplicate is kept rather than deleted so that a wrong match
+     * can be undone, but it never becomes a view.
+     */
+    duplicateOf: integer('duplicate_of').references((): AnySQLiteColumn => playbackSessions.id, {
+      onDelete: 'set null',
+    }),
   },
   (table) => [
     index('playback_sessions_device_last_seen').on(table.deviceId, table.lastSeenAt),

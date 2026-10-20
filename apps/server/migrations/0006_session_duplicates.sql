@@ -1,0 +1,1 @@
+ALTER TABLE `playback_sessions` ADD `duplicate_of` integer REFERENCES playback_sessions(id) ON DELETE set null;

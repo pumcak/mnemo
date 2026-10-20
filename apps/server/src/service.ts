@@ -14,6 +14,7 @@ import type { Logger } from './logger';
 import { backfillResolutions } from './resolution/backfill';
 import type { BackfillSummary } from './resolution/backfill';
 import { closeIdleSessions } from './sessions/assembly';
+import { markDuplicates } from './sessions/dedup';
 import { promoteViews } from './sessions/views';
 
 const migrationsFolder = join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
@@ -57,6 +58,7 @@ export const startService = async (
 
   const sweep = (): void => {
     closeIdleSessions(handle);
+    markDuplicates(handle);
     promoteViews(handle);
   };
 
