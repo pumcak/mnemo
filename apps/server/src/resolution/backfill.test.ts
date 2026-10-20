@@ -149,6 +149,8 @@ describe('backfillResolutions', () => {
     );
 
     expect(stateOf(id)?.resolvedExternalId).toBe(94605);
+    expect(stateOf(id)?.workId).toBeTypeOf('number');
+    expect(stateOf(id)?.episodeId).toBeTypeOf('number');
   });
 
   it('asks once for a title shared by several sessions', async () => {

@@ -2,6 +2,7 @@ import type { Catalogues, Resolution } from '@mnemo/resolver';
 import { asc, eq } from 'drizzle-orm';
 import { resolveWithAliases } from './aliases';
 import { queueForReview } from './review';
+import { upsertWork } from './works';
 import type { DatabaseHandle } from '../db/client';
 import { playbackSessions } from '../db/schema';
 import type { Logger } from '../logger';
@@ -87,7 +88,11 @@ const settle = (
   };
 
   if (resolution.confident && resolution.best !== undefined) {
+    const placed = upsertWork(handle.db, resolution.best.candidate, resolution.parsed, at);
+
     mark({
+      workId: placed.workId,
+      episodeId: placed.episodeId ?? null,
       resolutionState: 'resolved',
       resolvedCatalogue: resolution.best.candidate.catalogue,
       resolvedExternalId: resolution.best.candidate.id,
