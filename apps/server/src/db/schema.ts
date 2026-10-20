@@ -1,5 +1,5 @@
 import { devicePlatforms, playbackStates, sourceKinds } from '@mnemo/contracts';
-import type { MediaHint } from '@mnemo/contracts';
+import type { MediaHint, PlaybackState } from '@mnemo/contracts';
 import { catalogueNames, workKinds } from '@mnemo/resolver';
 import type { CatalogueName, ParsedTitle } from '@mnemo/resolver';
 import { sql } from 'drizzle-orm';
@@ -107,7 +107,7 @@ export const heartbeats = sqliteTable(
       .notNull()
       .references(() => playbackSessions.id, { onDelete: 'cascade' }),
     observedAt: integer('observed_at', { mode: 'timestamp_ms' }).notNull(),
-    state: text('state').notNull(),
+    state: text('state').$type<PlaybackState>().notNull(),
     positionSeconds: real('position_seconds').notNull(),
     durationSeconds: real('duration_seconds'),
   },

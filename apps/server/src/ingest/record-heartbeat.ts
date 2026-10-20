@@ -1,8 +1,9 @@
 import type { Heartbeat } from '@mnemo/contracts';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import type { DatabaseHandle } from '../db/client';
 import { devices, heartbeats, playbackSessions, sources } from '../db/schema';
 import { continuesSession, defaultSessionGapMs } from '../sessions/assembly';
+import { playedBetween } from '../sessions/progress';
 
 /**
  * Raised when a heartbeat names a device nobody registered. Devices carry a
@@ -116,8 +117,20 @@ export const recordHeartbeat = (
     // A late observation is still stored, but it must not move the session back
     // to a position and a time it has already left.
     if (open !== undefined && observedAt >= open.lastSeenAt) {
+      const previous = tx
+        .select({ observedAt: heartbeats.observedAt, state: heartbeats.state })
+        .from(heartbeats)
+        .where(eq(heartbeats.sessionId, sessionId))
+        .orderBy(desc(heartbeats.observedAt), desc(heartbeats.id))
+        .get();
+      const played =
+        previous === undefined
+          ? 0
+          : playedBetween(previous, { observedAt, state: heartbeat.state });
+
       tx.update(playbackSessions)
         .set({
+          watchedSeconds: sql`${playbackSessions.watchedSeconds} + ${played}`,
           lastSeenAt: observedAt,
           lastPositionSeconds: heartbeat.positionSeconds,
           durationSeconds: heartbeat.durationSeconds ?? null,

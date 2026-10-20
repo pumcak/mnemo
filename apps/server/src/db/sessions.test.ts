@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url';
+import type { PlaybackState } from '@mnemo/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openDatabase } from './client';
@@ -113,11 +114,14 @@ describe('playback sessions and heartbeats', () => {
 
   it('refuses a playback state the contracts do not declare', () => {
     const sessionId = seedSession(handle);
+    // The column type already rules this out, so the check constraint is only
+    // reachable by lying to the compiler, which is what a stale source would do.
+    const state = 'buffering' as PlaybackState;
 
     expect(() =>
       handle.db
         .insert(heartbeats)
-        .values({ sessionId, observedAt: startedAt, state: 'buffering', positionSeconds: 0 })
+        .values({ sessionId, observedAt: startedAt, state, positionSeconds: 0 })
         .run(),
     ).toThrow();
   });

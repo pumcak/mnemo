@@ -140,6 +140,29 @@ describe('recordHeartbeat', () => {
     expect(session?.lastSeenAt.toISOString()).toBe('2026-09-17T20:02:00.000Z');
   });
 
+  it('accumulates the time spent playing, not the time spent paused', () => {
+    recordHeartbeat(handle, heartbeat({ observedAt: '2026-09-17T20:01:00.000Z' }));
+    recordHeartbeat(handle, heartbeat({ observedAt: '2026-09-17T20:01:15.000Z' }));
+    recordHeartbeat(handle, heartbeat({ state: 'paused', observedAt: '2026-09-17T20:01:30.000Z' }));
+    recordHeartbeat(handle, heartbeat({ observedAt: '2026-09-17T20:05:00.000Z' }));
+    recordHeartbeat(handle, heartbeat({ observedAt: '2026-09-17T20:05:15.000Z' }));
+
+    expect(handle.db.select().from(playbackSessions).get()?.watchedSeconds).toBe(45);
+  });
+
+  it('earns nothing from a seek forward', () => {
+    recordHeartbeat(
+      handle,
+      heartbeat({ positionSeconds: 30, observedAt: '2026-09-17T20:01:00.000Z' }),
+    );
+    recordHeartbeat(
+      handle,
+      heartbeat({ positionSeconds: 2000, observedAt: '2026-09-17T20:01:05.000Z' }),
+    );
+
+    expect(handle.db.select().from(playbackSessions).get()?.watchedSeconds).toBe(5);
+  });
+
   it('keeps the media hint the source sent', () => {
     recordHeartbeat(handle, heartbeat({ hint: { seriesTitle: 'Arcane', season: 1, episode: 1 } }));
 
