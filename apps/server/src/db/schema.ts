@@ -1,7 +1,7 @@
 import { devicePlatforms, playbackStates, sourceKinds } from '@mnemo/contracts';
 import type { MediaHint, PlaybackState, SourceKind } from '@mnemo/contracts';
 import { catalogueNames, workKinds } from '@mnemo/resolver';
-import type { CatalogueName, ParsedTitle } from '@mnemo/resolver';
+import type { CatalogueName, ParsedTitle, WorkKind } from '@mnemo/resolver';
 import { sql } from 'drizzle-orm';
 import { check, index, integer, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
@@ -26,6 +26,54 @@ export const devices = sqliteTable(
     lastSeenAt: integer('last_seen_at', { mode: 'timestamp_ms' }).notNull(),
   },
   () => [check('devices_platform_known', oneOf('platform', devicePlatforms))],
+);
+
+/**
+ * A film or a series, as a catalogue knows it. One row per catalogue entry, so
+ * the same show found on tmdb and on anilist is two works until something says
+ * otherwise: guessing that they match would be a resolution of its own.
+ */
+export const works = sqliteTable(
+  'works',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    catalogue: text('catalogue').$type<CatalogueName>().notNull(),
+    externalId: integer('external_id').notNull(),
+    kind: text('kind').$type<WorkKind>().notNull(),
+    title: text('title').notNull(),
+    year: integer('year'),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    unique('works_catalogue_external').on(table.catalogue, table.externalId),
+    check('works_kind_known', oneOf('kind', workKinds)),
+    check('works_catalogue_known', oneOf('catalogue', catalogueNames)),
+  ],
+);
+
+export const seasons = sqliteTable(
+  'seasons',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    workId: integer('work_id')
+      .notNull()
+      .references(() => works.id, { onDelete: 'cascade' }),
+    number: integer('number').notNull(),
+  },
+  (table) => [unique('seasons_work_number').on(table.workId, table.number)],
+);
+
+export const episodes = sqliteTable(
+  'episodes',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    seasonId: integer('season_id')
+      .notNull()
+      .references(() => seasons.id, { onDelete: 'cascade' }),
+    number: integer('number').notNull(),
+  },
+  (table) => [unique('episodes_season_number').on(table.seasonId, table.number)],
 );
 
 /**
@@ -91,6 +139,8 @@ export const playbackSessions = sqliteTable(
      * playback. The duplicate is kept rather than deleted so that a wrong match
      * can be undone, but it never becomes a view.
      */
+    workId: integer('work_id').references(() => works.id, { onDelete: 'set null' }),
+    episodeId: integer('episode_id').references(() => episodes.id, { onDelete: 'set null' }),
     duplicateOf: integer('duplicate_of').references((): AnySQLiteColumn => playbackSessions.id, {
       onDelete: 'set null',
     }),
